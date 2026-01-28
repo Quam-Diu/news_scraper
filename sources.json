@@ -1,0 +1,12 @@
+{
+  "lego_news": [
+    "https://brickset.com/feed",
+    "https://www.brothers-brick.com/feed/"
+  ],
+  "tech": [
+    "https://news.ycombinator.com/rss"
+  ],
+  "data_science": [
+    "https://towardsdatascience.com/feed"
+  ]
+}
