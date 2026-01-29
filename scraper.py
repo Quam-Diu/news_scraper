@@ -1,156 +1,140 @@
-#!/usr/bin/env python3
-"""
-Automated News Scraper for Notion
-Fetches articles from RSS feeds and websites, stores in Notion database
-"""
-
+import os
+import json
 import requests
 import feedparser
-from datetime import datetime, timezone
+from datetime import datetime
 from notion_client import Client
 from bs4 import BeautifulSoup
-from dateutil import parser
-import json
-import config
+from dateutil import parser as date_parser
 
-# Initialize Notion
-notion = Client(auth=config.NOTION_TOKEN)
+# Initialize Notion client
+notion = Client(auth=os.environ["NOTION_TOKEN"])
+DATABASE_ID = os.environ["NOTION_DATABASE_ID"]
 
-class NotionNewsAggregator:
-    def __init__(self):
-        self.notion = notion
-        self.db_id = config.DATABASE_ID
-        self.articles_added = 0
-        self.articles_skipped = 0
+def fetch_rss_feeds(sources):
+    """Fetch articles from RSS feeds"""
+    articles = []
     
-    def load_sources(self):
-        """Load sources from JSON file"""
-        with open('sources.json', 'r') as f:
-            return json.load(f)
+    for source in sources.get("rss_feeds", []):
+        print(f"Fetching RSS: {source['name']}")
+        feed = feedparser.parse(source["url"])
+        
+        for entry in feed.entries[:5]:  # Limit to 5 most recent
+            articles.append({
+                "title": entry.get("title", "No Title"),
+                "url": entry.get("link", ""),
+                "source": source["name"],
+                "category": source["category"],
+                "published": entry.get("published", ""),
+                "summary": entry.get("summary", "")[:500]  # Limit length
+            })
     
-    def article_exists(self, url):
-        """Check if article URL already exists in database"""
+    return articles
+
+def scrape_websites(sources):
+    """Scrape articles from websites"""
+    articles = []
+    
+    for source in sources.get("web_scrape", []):
+        print(f"Scraping: {source['name']}")
         try:
-            response = self.notion.databases.query(
-                database_id=self.DATABASE_ID,
-                filter={
-                    "property": "URL",
-                    "url": {"equals": url}
-                }
-            )
-            return len(response["results"]) > 0
-        except Exception as e:
-            print(f"Error checking existence: {e}")
-            return False
-    
-    def parse_rss_feed(self, feed_url, category):
-        """Parse RSS feed and extract articles"""
-        articles = []
-        try:
-            print(f"Fetching RSS: {feed_url}")
-            feed = feedparser.parse(feed_url)
+            response = requests.get(source["url"], timeout=10)
+            soup = BeautifulSoup(response.content, 'html.parser')
             
-            for entry in feed.entries[:config.MAX_ARTICLES_PER_SOURCE]:
-                # Parse date
-                pub_date = None
-                if hasattr(entry, 'published'):
-                    try:
-                        pub_date = parser.parse(entry.published)
-                    except:
-                        pass
+            # Customize this based on your target sites
+            items = soup.select(source["selector"])
+            
+            for item in items[:5]:
+                title_tag = item.find(['h1', 'h2', 'h3', 'a'])
+                link_tag = item.find('a')
                 
-                articles.append({
-                    'title': entry.get('title', 'No Title')[:2000],
-                    'url': entry.get('link', ''),
-                    'category': category,
-                    'published_date': pub_date,
-                    'summary': BeautifulSoup(
-                        entry.get('summary', ''), 'html.parser'
-                    ).get_text()[:2000]
-                })
-        
+                if title_tag and link_tag:
+                    articles.append({
+                        "title": title_tag.get_text(strip=True),
+                        "url": link_tag.get('href', ''),
+                        "source": source["name"],
+                        "category": source["category"],
+                        "published": "",
+                        "summary": item.get_text(strip=True)[:500]
+                    })
         except Exception as e:
-            print(f"Error parsing {feed_url}: {e}")
-        
-        return articles
+            print(f"Error scraping {source['name']}: {e}")
     
-    def create_notion_page(self, article):
-        """Create a new page in Notion database"""
-        if self.article_exists(article['url']):
-            self.articles_skipped += 1
-            return
-        
-        try:
-            properties = {
-                "Title": {
-                    "title": [{"text": {"content": article['title']}}]
-                },
-                "URL": {
-                    "url": article['url']
-                },
-                "Source": {
-                    "select": {"name": article['category']}
-                },
-                "Scraped Date": {
-                    "date": {"start": datetime.now(timezone.utc).isoformat()}
-                },
-                "Read Status": {
-                    "select": {"name": "Unread"}
-                }
+    return articles
+
+def check_if_exists(url):
+    """Check if article already exists in Notion"""
+    try:
+        results = notion.databases.query(
+            database_id=DATABASE_ID,
+            filter={
+                "property": "URL",
+                "url": {"equals": url}
             }
-            
-            # Add published date if available
-            if article.get('published_date'):
-                properties["Published Date"] = {
-                    "date": {"start": article['published_date'].isoformat()}
-                }
-            
-            # Add summary if available
-            if article.get('summary'):
-                properties["Summary"] = {
-                    "rich_text": [{"text": {"content": article['summary']}}]
-                }
-            
-            self.notion.pages.create(
-                parent={"database_id": self.db_id},
-                properties=properties
-            )
-            
-            self.articles_added += 1
-            print(f"✓ Added: {article['title'][:60]}...")
-        
-        except Exception as e:
-            print(f"✗ Error adding article: {e}")
+        )
+        return len(results.get("results", [])) > 0
+    except:
+        return False
+
+def add_to_notion(article):
+    """Add article to Notion database"""
+    if check_if_exists(article["url"]):
+        print(f"Skipping duplicate: {article['title']}")
+        return
     
-    def run(self):
-        """Main execution function"""
-        print("=" * 60)
-        print("Starting News Aggregation")
-        print("=" * 60)
+    try:
+        # Parse published date
+        published_date = None
+        if article["published"]:
+            try:
+                parsed = date_parser.parse(article["published"])
+                published_date = parsed.isoformat()
+            except:
+                pass
         
-        sources = self.load_sources()
-        all_articles = []
+        # Create page properties
+        properties = {
+            "Title": {"title": [{"text": {"content": article["title"]}}]},
+            "URL": {"url": article["url"]},
+            "Source": {"select": {"name": article["category"]}},
+            "Scraped Date": {"date": {"start": datetime.now().isoformat()}},
+            "Read Status": {"select": {"name": "Unread"}}
+        }
         
-        # Process each category
-        for category, feed_urls in sources.items():
-            print(f"\n📰 Processing category: {category}")
-            for feed_url in feed_urls:
-                articles = self.parse_rss_feed(feed_url, category)
-                all_articles.extend(articles)
+        if published_date:
+            properties["Published Date"] = {"date": {"start": published_date}}
         
-        print(f"\n📊 Found {len(all_articles)} total articles")
-        print("Adding to Notion...")
+        if article["summary"]:
+            properties["Summary"] = {
+                "rich_text": [{"text": {"content": article["summary"]}}]
+            }
         
-        # Add to Notion
-        for article in all_articles:
-            self.create_notion_page(article)
-        
-        # Summary
-        print("\n" + "=" * 60)
-        print(f"✓ Articles added: {self.articles_added}")
-        print(f"⊘ Articles skipped (duplicates): {self.articles_skipped}")
-        print("=" * 60)
+        notion.pages.create(
+            parent={"database_id": DATABASE_ID},
+            properties=properties
+        )
+        print(f"Added: {article['title']}")
+    except Exception as e:
+        print(f"Error adding to Notion: {e}")
+
+def main():
+    # Load sources
+    with open("sources.json", "r") as f:
+        sources = json.load(f)
+    
+    # Fetch articles
+    print("Starting scrape...")
+    articles = []
+    articles.extend(fetch_rss_feeds(sources))
+    articles.extend(scrape_websites(sources))
+    
+    print(f"\nFound {len(articles)} articles")
+    
+    # Add to Notion
+    for article in articles:
+        add_to_notion(article)
+    
+    print("\nScraping complete!")
 
 if __name__ == "__main__":
-    aggregator = NotionNewsAggregator()
-    aggregator.run()
+    main()
