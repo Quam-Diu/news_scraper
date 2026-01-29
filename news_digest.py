@@ -11,7 +11,7 @@ import pytz
 CONFIG = {
     'notion_token': os.environ.get('NOTION_TOKEN'),
     'database_id': 'a60bb86bcf5544dca9e3df6c0640ea48',
-    'parent_page_id': 'YOUR_PARENT_PAGE_ID',  # Extract from https://www.notion.so/19f9f7560dbc80c9a359fad251d9eff5
+    'parent_page_id': '2f79f7560dbc802a846dc2f52fd4a26a',  # Extract from https://www.notion.so/19f9f7560dbc80c9a359fad251d9eff5
     'timezone': 'America/Guatemala',
     'sources': ['LEGO News', 'Data Science', 'Tech'],
     'max_articles_per_source': 10,
