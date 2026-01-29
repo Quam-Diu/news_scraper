@@ -1,12 +1,22 @@
 {
-  "lego_news": [
-    "https://brickset.com/feed",
-    "https://www.brothers-brick.com/feed/"
+  "rss_feeds": [
+    {
+      "name": "Brickset News",
+      "url": "https://brickset.com/feed",
+      "category": "LEGO News"
+    },
+    {
+      "name": "Brothers Brick",
+      "url": "https://www.brothers-brick.com/feed/",
+      "category": "LEGO News"
+    }
   ],
-  "tech": [
-    "https://news.ycombinator.com/rss"
-  ],
-  "data_science": [
-    "https://towardsdatascience.com/feed"
+  "web_scrape": [
+    {
+      "name": "Example Site",
+      "url": "https://example.com/news",
+      "category": "Tech",
+      "selector": "article.post"
+    }
   ]
 }
