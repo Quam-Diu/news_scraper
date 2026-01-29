@@ -11,22 +11,24 @@ import pytz
 CONFIG = {
     'notion_token': os.environ.get('DIGEST_TOKEN'), 
     'database_id': '5ad52157ba4d490aa5b8364a0fa56ca3',
-    'parent_page_id': '2f79f7560dbc802a846dc2f52fd4a26a',  # Extract from https://www.notion.so/19f9f7560dbc80c9a359fad251d9eff5
+    'parent_page_id': '2f79f7560dbc802a846dc2f52fd4a26a',  # Extract from home page
     'timezone': 'America/Guatemala',
     'sources': ['LEGO News', 'Data Science', 'Tech'],
     'max_articles_per_source': 10,
-    'summary_length': 'medium',
     'hours_lookback': 24,
     'skip_empty_sources': True,
     'create_if_no_articles': False,
-    'fetch_full_content': True,
 }
 
 # ============================================
-# Main Script
+# Initialize Notion Client
 # ============================================
 
 notion = Client(auth=CONFIG['notion_token'])
+
+# ============================================
+# Functions
+# ============================================
 
 def get_articles_from_last_24h():
     """Query NEWS_DB for articles from last 24 hours"""
@@ -34,42 +36,49 @@ def get_articles_from_last_24h():
     now = datetime.now(tz)
     lookback = now - timedelta(hours=CONFIG['hours_lookback'])
     
-    # Query Notion database
-    results = notion.databases.query(
-        database_id=CONFIG['database_id'],
-        filter={
-            "and": [
-                {
-                    "property": "Date",
-                    "date": {
-                        "after": lookback.isoformat()
-                    }
-                },
-                {
-                    "property": "Source",
-                    "select": {
-                        "is_not_empty": True
-                    }
-                }
-            ]
-        },
-        sorts=[{"property": "Source", "direction": "ascending"}]
-    )
-    
-    return results['results']
-
-def fetch_article_content(url):
-    """Fetch full article text from URL (optional)"""
-    if not CONFIG['fetch_full_content']:
-        return None
-    
     try:
-        response = requests.get(url, timeout=10)
-        # Add your content extraction logic here
-        # (BeautifulSoup, newspaper3k, etc.)
-        return response.text[:1000]  # Placeholder
-    except:
-        return None
+        # Correct API call for notion-client
+        response = notion.databases.query(
+            database_id=CONFIG['database_id'],
+            filter={
+                "and": [
+                    {
+                        "property": "Date",
+                        "date": {
+                            "after": lookback.isoformat()
+                        }
+                    },
+                    {
+                        "property": "Source",
+                        "select": {
+                            "is_not_empty": True
+                        }
+                    }
+                ]
+            },
+            sorts=[{"property": "Source", "direction": "ascending"}]
+        )
+        return response.get('results', [])
+    except AttributeError as e:
+        print(f"API Error: {e}")
+        print("Trying alternative API format...")
+        # Fallback for older versions
+        response = notion.query_database(
+            CONFIG['database_id'],
+            filter={
+                "and": [
+                    {
+                        "property": "Date",
+                        "date": {"after": lookback.isoformat()}
+                    },
+                    {
+                        "property": "Source",
+                        "select": {"is_not_empty": True}
+                    }
+                ]
+            }
+        )
+        return response.get('results', [])
 
 def create_summary_by_source(articles):
     """Group articles by source and create summaries"""
@@ -77,7 +86,13 @@ def create_summary_by_source(articles):
     
     for article in articles:
         props = article['properties']
-        source = props.get('Source', {}).get('select', {}).get('name', 'Unknown')
+        
+        # Extract source
+        source_prop = props.get('Source', {})
+        if 'select' in source_prop and source_prop['select']:
+            source = source_prop['select'].get('name', 'Unknown')
+        else:
+            source = 'Unknown'
         
         if source not in CONFIG['sources']:
             continue
@@ -85,17 +100,29 @@ def create_summary_by_source(articles):
         if source not in by_source:
             by_source[source] = []
         
+        # Extract title
+        title_prop = props.get('Title', {}).get('title', [])
+        title = title_prop[0].get('plain_text', 'Untitled') if title_prop else 'Untitled'
+        
+        # Extract URL
+        url = props.get('URL', {}).get('url', '')
+        
+        # Extract date
+        date_prop = props.get('Date', {}).get('date', {})
+        date = date_prop.get('start', '') if date_prop else ''
+        
         by_source[source].append({
-            'title': props.get('Title', {}).get('title', [{}])[0].get('plain_text', 'Untitled'),
-            'url': props.get('URL', {}).get('url', ''),
-            'date': props.get('Date', {}).get('date', {}).get('start', ''),
+            'title': title,
+            'url': url,
+            'date': date,
         })
     
     return by_source
 
 def create_digest_page(by_source):
     """Create the daily digest page in Notion"""
-    today = datetime.now(pytz.timezone(CONFIG['timezone'])).strftime('%B %d, %Y')
+    tz = pytz.timezone(CONFIG['timezone'])
+    today = datetime.now(tz).strftime('%B %d, %Y')
     
     # Build page content
     children = [
@@ -114,18 +141,23 @@ def create_digest_page(by_source):
     ]
     
     # Add statistics
-    if CONFIG.get('add_statistics', True):
-        total = sum(len(articles) for articles in by_source.values())
-        stats_text = f"**Total Articles:** {total}  |  "
-        stats_text += "  |  ".join([f"**{src}:** {len(arts)}" for src, arts in by_source.items()])
-        
-        children.append({
-            "object": "block",
-            "type": "paragraph",
-            "paragraph": {
-                "rich_text": [{"type": "text", "text": {"content": stats_text}}]
-            }
-        })
+    total = sum(len(articles) for articles in by_source.values())
+    children.append({
+        "object": "block",
+        "type": "paragraph",
+        "paragraph": {
+            "rich_text": [
+                {"type": "text", "text": {"content": f"Total Articles: {total}  |  "}},
+                {"type": "text", "text": {"content": "  |  ".join([f"{src}: {len(arts)}" for src, arts in by_source.items()])}}
+            ]
+        }
+    })
+    
+    children.append({
+        "object": "block",
+        "type": "divider",
+        "divider": {}
+    })
     
     # Add content by source
     for source, articles in by_source.items():
@@ -149,36 +181,57 @@ def create_digest_page(by_source):
                 "type": "bulleted_list_item",
                 "bulleted_list_item": {
                     "rich_text": [
-                        {"type": "text", "text": {"content": article['title'], "link": {"url": article['url']}}}
+                        {
+                            "type": "text",
+                            "text": {
+                                "content": article['title'],
+                                "link": {"url": article['url']} if article['url'] else None
+                            }
+                        }
                     ]
                 }
             })
     
     # Create page
-    notion.pages.create(
-        parent={"page_id": CONFIG['parent_page_id']},
-        icon={"emoji": "📰"},
-        properties={
-            "title": {"title": [{"text": {"content": f"Daily News - {today}"}}]}
-        },
-        children=children
-    )
+    try:
+        new_page = notion.pages.create(
+            parent={"page_id": CONFIG['parent_page_id']},
+            icon={"emoji": "📰"},
+            properties={
+                "title": {"title": [{"text": {"content": f"Daily News - {today}"}}]}
+            },
+            children=children
+        )
+        return new_page['url']
+    except Exception as e:
+        print(f"Error creating page: {e}")
+        raise
 
 def main():
+    print("🚀 Starting News Digest Bot...")
+    print(f"Timezone: {CONFIG['timezone']}")
+    print(f"Lookback: {CONFIG['hours_lookback']} hours")
+    print()
+    
     print("Fetching articles from NEWS_DB...")
     articles = get_articles_from_last_24h()
+    print(f"Found {len(articles)} total articles")
     
     if len(articles) == 0 and not CONFIG['create_if_no_articles']:
-        print("No new articles found. Skipping digest creation.")
+        print("⚠️  No new articles found. Skipping digest creation.")
         return
     
-    print(f"Found {len(articles)} articles. Grouping by source...")
+    print("\nGrouping by source...")
     by_source = create_summary_by_source(articles)
     
-    print("Creating digest page...")
-    create_digest_page(by_source)
+    for source, arts in by_source.items():
+        print(f"  - {source}: {len(arts)} articles")
     
-    print("✅ Daily digest created successfully!")
+    print("\nCreating digest page...")
+    page_url = create_digest_page(by_source)
+    
+    print(f"\n✅ Daily digest created successfully!")
+    print(f"📄 View at: {page_url}")
 
 if __name__ == "__main__":
     main()
