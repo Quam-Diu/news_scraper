@@ -9,7 +9,7 @@ import pytz
 # ============================================
 
 CONFIG = {
-    'notion_token': os.environ.get('DIGEST_TOKEN'),
+    'notion_token': os.environ.get('DIGEST_TOKEN'), 
     'database_id': '5ad52157ba4d490aa5b8364a0fa56ca3',
     'parent_page_id': '2f79f7560dbc802a846dc2f52fd4a26a',  # Extract from https://www.notion.so/19f9f7560dbc80c9a359fad251d9eff5
     'timezone': 'America/Guatemala',
