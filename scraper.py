@@ -32,7 +32,7 @@ class NotionNewsAggregator:
         """Check if article URL already exists in database"""
         try:
             response = self.notion.databases.query(
-                database_id=self.db_id,
+                database_id=self.DATABASE_ID,
                 filter={
                     "property": "URL",
                     "url": {"equals": url}
