@@ -23,5 +23,5 @@ jobs:
       
       - name: Run digest script
         env:
-          NOTION_TOKEN: ${{secrets.NOTION_TOKEN}} 
+          NOTION_TOKEN: ${{secrets.DIGEST_TOKEN}} 
         run: python news_digest.py
