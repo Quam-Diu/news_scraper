@@ -1,22 +1,24 @@
 {
-  "rss_feeds": [
+  "feeds": [
     {
-      "name": "Brickset News",
+      "name": "Brickset LEGO News",
       "url": "https://brickset.com/feed",
       "category": "LEGO News"
     },
     {
-      "name": "Brothers Brick",
+      "name": "The Brothers Brick",
       "url": "https://www.brothers-brick.com/feed/",
       "category": "LEGO News"
-    }
-  ],
-  "web_scrape": [
+    },
     {
-      "name": "Example Site",
-      "url": "https://example.com/news",
-      "category": "Tech",
-      "selector": "article.post"
+      "name": "Hacker News",
+      "url": "https://news.ycombinator.com/rss",
+      "category": "Tech"
+    },
+    {
+      "name": "Towards Data Science",
+      "url": "https://towardsdatascience.com/feed",
+      "category": "Data Science"
     }
   ]
 }
