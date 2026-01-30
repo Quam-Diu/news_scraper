@@ -8,6 +8,8 @@ import pytz
 # CONFIGURATION - Edit these values
 # ============================================
 
+
+
 CONFIG = {
     'notion_token': os.environ.get('DIGEST_TOKEN'), 
     'database_id': '5ad52157ba4d490aa5b8364a0fa56ca3',
@@ -24,7 +26,10 @@ CONFIG = {
 # Initialize Client
 # ============================================
 
-notion = Client(auth=notion_token)
+NOTION_TOKEN = os.environ.get("DIGEST_TOKEN")
+notion = Client(auth=NOTION_TOKEN)
+
+#notion = Client(auth=notion_token)
 print(f"Token present: {bool(CONFIG['notion_token'])}")
 print(f"Token starts with 'ntn_': {CONFIG['notion_token'].startswith('ntn_') if CONFIG['notion_token'] else False}")
 # ============================================
