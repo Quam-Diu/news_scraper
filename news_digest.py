@@ -9,7 +9,7 @@ import pytz
 # ============================================
 
 CONFIG = {
-    'notion_token': os.environ.get('NOTION_TOKEN'), 
+    'notion_token': os.environ.get('DIGEST_TOKEN'), 
     'database_id': 'a60bb86bcf5544dca9e3df6c0640ea48',
     'parent_page_id': '2f79f7560dbc802a846dc2f52fd4a26a',  # Extract from home page
     'timezone': 'America/Guatemala',
@@ -24,12 +24,12 @@ CONFIG = {
 # Initialize Client
 # ============================================
 
-NOTION_TOKEN = os.environ.get("NOTION_TOKEN")
+NOTION_TOKEN = os.environ.get("DIGEST_TOKEN")
 notion = Client(auth=NOTION_TOKEN)
 
 #notion = Client(auth=CONFIG['notion_token'])
-
 #notion = Client(auth=notion_token)
+
 #print(f"Token present: {bool(CONFIG['notion_token'])}")
 #print(f"Token starts with 'ntn_': {CONFIG['notion_token'].startswith('ntn_') if CONFIG['notion_token'] else False}")
 
