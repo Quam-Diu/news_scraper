@@ -27,8 +27,8 @@ CONFIG = {
 #NOTION_TOKEN = os.environ.get("DIGEST_TOKEN")
 #notion = Client(auth=NOTION_TOKEN)
 
-#notion = Client(auth=CONFIG['notion_token'])
-notion = Client(auth=notion_token)
+notion = Client(auth=CONFIG['notion_token'])
+#notion = Client(auth=notion_token)
 
 print(f"Token present: {bool(CONFIG['notion_token'])}")
 print(f"Token starts with 'ntn_': {CONFIG['notion_token'].startswith('ntn_') if CONFIG['notion_token'] else False}")
