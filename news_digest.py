@@ -33,8 +33,6 @@ notion = Client(auth=CONFIG['notion_token'])
 print(f"Token present: {bool(CONFIG['notion_token'])}")
 print(f"Token starts with 'ntn_': {CONFIG['notion_token'].startswith('ntn_') if CONFIG['notion_token'] else False}")
 
-print(f"Token present: {bool(NOTION_TOKEN)}")
-print(f"Token starts with 'ntn_': {NOTION_TOKEN.startswith('ntn_') if NOTION_TOKEN else False}")
 # ============================================
 # Functions
 # ============================================
