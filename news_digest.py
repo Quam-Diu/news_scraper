@@ -129,17 +129,44 @@ def create_digest_page(by_source):
     tz = pytz.timezone(CONFIG['timezone'])
     today = datetime.now(tz).strftime('%B %d, %Y')
     
-    # Build content as rich text blocks
-    content_blocks = []
+    # Build blocks (split to avoid 2000 char limit per block)
+    children = []
     
-    # Add statistics
+    # Add statistics heading
     total = sum(len(articles) for articles in by_source.values())
-    stats_text = f"Total Articles: {total}\n\n"
+    children.append({
+        "object": "block",
+        "type": "heading_2",
+        "heading_2": {
+            "rich_text": [{"text": {"content": "📊 Summary"}}]
+        }
+    })
+    
+    # Add stats as separate paragraphs
+    children.append({
+        "object": "block",
+        "type": "paragraph",
+        "paragraph": {
+            "rich_text": [{"text": {"content": f"Total Articles: {total}"}}]
+        }
+    })
+    
     for src, arts in by_source.items():
         emoji = {"LEGO News": "🧱", "Data Science": "📊", "Tech": "💻"}.get(src, "📰")
-        stats_text += f"{emoji} {src}: {len(arts)} articles\n"
+        children.append({
+            "object": "block",
+            "type": "paragraph",
+            "paragraph": {
+                "rich_text": [{"text": {"content": f"{emoji} {src}: {len(arts)} articles"}}]
+            }
+        })
     
-    content_blocks.append(stats_text + "\n" + "―" * 50 + "\n\n")
+    # Add divider
+    children.append({
+        "object": "block",
+        "type": "divider",
+        "divider": {}
+    })
     
     # Add articles by source
     for source, articles in by_source.items():
@@ -147,15 +174,38 @@ def create_digest_page(by_source):
             continue
         
         emoji = {"LEGO News": "🧱", "Data Science": "📊", "Tech": "💻"}.get(source, "📰")
-        content_blocks.append(f"\n## {emoji} {source}\n\n")
         
+        # Source heading
+        children.append({
+            "object": "block",
+            "type": "heading_2",
+            "heading_2": {
+                "rich_text": [{"text": {"content": f"{emoji} {source} ({len(articles)} articles)"}}]
+            }
+        })
+        
+        # Add each article as a bulleted list item
         for article in articles[:CONFIG['max_articles_per_source']]:
-            content_blocks.append(f"• [{article['title']}]({article['url']})\n")
+            # Title with link
+            rich_text = [{
+                "text": {
+                    "content": article['title'],
+                    "link": {"url": article['url']}
+                }
+            }]
+            
+            # Add summary if available (truncate to stay under limit)
             if article['summary']:
-                content_blocks.append(f"  _{article['summary'][:200]}..._\n")
-            content_blocks.append("\n")
-    
-    full_content = "".join(content_blocks)
+                summary = article['summary'][:150]
+                rich_text.append({"text": {"content": f" - {summary}..."}})
+            
+            children.append({
+                "object": "block",
+                "type": "bulleted_list_item",
+                "bulleted_list_item": {
+                    "rich_text": rich_text
+                }
+            })
     
     # Create page using notion.pages.create (same pattern as your scraper)
     page = notion.pages.create(
@@ -164,15 +214,7 @@ def create_digest_page(by_source):
         properties={
             "title": {"title": [{"text": {"content": f"📰 Daily News - {today}"}}]}
         },
-        children=[
-            {
-                "object": "block",
-                "type": "paragraph",
-                "paragraph": {
-                    "rich_text": [{"text": {"content": full_content}}]
-                }
-            }
-        ]
+        children=children
     )
     
     return page.get('url', 'Created successfully')
