@@ -44,6 +44,12 @@ def get_articles_from_last_24h():
     tz = pytz.timezone(CONFIG['timezone'])
     now = datetime.now(tz)
     lookback = now - timedelta(hours=CONFIG['hours_lookback'])
+
+    # DEBUG - ADD THESE LINES
+    print(f"DEBUG: Token exists: {bool(CONFIG['notion_token'])}")
+    print(f"DEBUG: Token length: {len(CONFIG['notion_token']) if CONFIG['notion_token'] else 0}")
+    print(f"DEBUG: Token starts with: {CONFIG['notion_token'][:10] if CONFIG['notion_token'] else 'None'}...")
+    # END DEBUG
     
     # Use REST API for querying (notion-client doesn't have .query method)
     headers = {
