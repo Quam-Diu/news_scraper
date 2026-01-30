@@ -24,9 +24,9 @@ CONFIG = {
 # Initialize Client
 # ============================================
 
-notion = Client(auth=CONFIG['notion_token'])
+notion = Client(auth=notion_token)
 print(f"Token present: {bool(CONFIG['notion_token'])}")
-print(f"Token starts with 'secret_': {CONFIG['notion_token'].startswith('secret_') if CONFIG['notion_token'] else False}")
+print(f"Token starts with 'ntn_': {CONFIG['notion_token'].startswith('ntn_') if CONFIG['notion_token'] else False}")
 # ============================================
 # Functions
 # ============================================
