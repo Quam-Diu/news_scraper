@@ -22,7 +22,7 @@ CONFIG = {
     'max_articles_per_source': 10,
     'hours_lookback': 24,
     'skip_empty_sources': True,
-    'ai_summary_enabled': True,
+    'ai_summary_enabled': False,
     'hot_topics_enabled': True,
     'hot_topic_threshold': 3,
 }
