@@ -1,0 +1,29 @@
+name: AI News Digest
+
+on:
+  schedule:
+    - cron: '0 18 * * *'  # Daily at 6 PM Guatemala time (midnight UTC)
+  workflow_dispatch:  # Manual trigger button
+
+jobs:
+  create-digest:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Install dependencies
+        run: |
+          pip install notion-client pytz requests openai beautifulsoup4
+      
+      - name: Run AI News Digest Bot
+        env:
+          NOTION_TOKEN: $ secrets.DIGEST_TOKEN 
+          OPENAI_API_KEY: $ secrets.OPENAI_API_KEY 
+        run: python digest_ai.py
