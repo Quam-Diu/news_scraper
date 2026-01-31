@@ -26,4 +26,4 @@ jobs:
         env:
           NOTION_TOKEN: $ secrets.DIGEST_TOKEN 
           OPENAI_API_KEY: $ secrets.OPENAI_API_KEY 
-        run: python digest_ai.py
+        run: python ai_digest.py
