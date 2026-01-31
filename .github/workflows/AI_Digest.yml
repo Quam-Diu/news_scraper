@@ -24,6 +24,6 @@ jobs:
       
       - name: Run AI News Digest Bot
         env:
-          NOTION_TOKEN: $ secrets.DIGEST_TOKEN 
-          OPENAI_API_KEY: $ secrets.OPENAI_API_KEY 
+          NOTION_TOKEN: ${{secrets.DIGEST_TOKEN}}
+          OPENAI_API_KEY: ${{secrets.OPENAI_API_KEY}} 
         run: python ai_digest.py
