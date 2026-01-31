@@ -16,7 +16,7 @@ CONFIG = {
     'notion_token': os.environ.get('NOTION_TOKEN'),
     'openai_api_key': os.environ.get('OPENAI_API_KEY'),
     'database_id': 'a60bb86bcf5544dca9e3df6c0640ea48',
-    'parent_page_id': 'YOUR_PARENT_PAGE_ID',
+    'parent_page_id': '2f79f7560dbc802a846dc2f52fd4a26a',  # Extract from home page
     'timezone': 'America/Guatemala',
     'sources': ['LEGO News', 'Data Science', 'Tech'],
     'max_articles_per_source': 10,
